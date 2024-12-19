@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import { generateBoard } from '../utils';
-export const useGame = (width: number, height: number, mineCount: number) => {
 
+export const useGame = (width: number, height: number, mineCount: number) => {
   const board = ref(generateBoard(width, height, mineCount));
   const gameOver = ref(false);
   const gameWon = ref(false);

@@ -1,14 +1,9 @@
 <template>
-  <button
-    class="cell"
-    :class="{
-      revealed: modelValue.isRevealed,
-      mine: modelValue.isRevealed && modelValue.isMine,
-      flagged: modelValue.isFlagged
-    }"
-    @click="$emit('reveal')"
-    @contextmenu.prevent="$emit('flag')"
-  >
+  <button class="cell" :class="{
+    revealed: modelValue.isRevealed,
+    mine: modelValue.isRevealed && modelValue.isMine,
+    flagged: modelValue.isFlagged
+  }" @click="$emit('reveal')" @contextmenu.prevent="$emit('flag')">
     <template v-if="modelValue.isRevealed && !modelValue.isMine">
       {{ modelValue.neighborMines || '' }}
     </template>
@@ -22,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CellState } from '@/types';
+import type { CellState } from '../types';
 
 defineProps<{
   modelValue: CellState;

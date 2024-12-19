@@ -8,13 +8,8 @@
     </div>
     <div class="board" :style="{ gridTemplateColumns: `repeat(${width}, 40px)` }">
       <template v-for="(row, y) in board" :key="y">
-        <Cell
-          v-for="(cell, x) in row"
-          :key="`${x}-${y}`"
-          v-model="board[y][x]"
-          @reveal="revealCell(x, y)"
-          @flag="toggleFlag(x, y)"
-        />
+        <Cell v-for="(cell, x) in row" :key="`${x}-${y}`" v-model="board[y][x]" @reveal="revealCell(x, y)"
+          @flag="toggleFlag(x, y)" />
       </template>
     </div>
   </div>
@@ -25,9 +20,16 @@
 import  Cell  from './Cell.vue';
 import {useGame}  from '../stores/useGame';
 
-const width = 10;
-const height = 10;
-const mineCount = 10;
+const props = defineProps<{
+  width: number;
+  height: number;
+  mineCount: number;
+}>();
+
+const emit = defineEmits<{
+  (e: 'gameOver'): void;
+  (e: 'gameWon'): void;
+}>();
 
 const {
   board,
@@ -37,7 +39,7 @@ const {
   revealCell,
   toggleFlag,
   resetGame
-} = useGame(width, height, mineCount);
+} = useGame(props.width, props.height, props.mineCount);
 </script>
 
 <style scoped>
