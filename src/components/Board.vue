@@ -15,7 +15,6 @@
   </div>
 </template>
 
-
 <script setup lang="ts">
 import  Cell  from './Cell.vue';
 import {useGame}  from '../stores/useGame';

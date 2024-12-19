@@ -1,36 +1,46 @@
-// src/components/GameSettings.vue
 <template>
     <div class="settings-panel">
+        <h2>自定义游戏设置</h2>
         <div class="settings-form">
             <div class="form-group">
-                <label>行数 (6-20):
-                    <input type="number" v-model.number="rows" min="6" max="20" @input="validateAndEmit" />
-                </label>
+                <label>行数 (6-20):</label>
+                <input type="number" v-model.number="rows" min="6" max="20" @input="validateAndUpdate" />
             </div>
             <div class="form-group">
-                <label>列数 (6-20):
-                    <input type="number" v-model.number="cols" min="6" max="20" @input="validateAndEmit" />
-                </label>
+                <label>列数 (6-20):</label>
+                <input type="number" v-model.number="cols" min="6" max="20" @input="validateAndUpdate" />
             </div>
             <div class="form-group">
-                <label>雷数 (最大 {{ maxMines }}):
-                    <input type="number" v-model.number="mines" :min="1" :max="maxMines" @input="validateAndEmit" />
-                </label>
+                <label>雷数 (最大 {{ maxMines }}):</label>
+                <input type="number" v-model.number="mines" :min="1" :max="maxMines" @input="validateAndUpdate" />
             </div>
         </div>
         <div class="error-message" v-if="errorMessage">{{ errorMessage }}</div>
-        <button class="start-button" @click="startGame" :disabled="!!errorMessage || !isValid">
-            开始游戏
-        </button>
+        <div class="button-group">
+            <button class="save-button" @click="saveSettings" :disabled="!!errorMessage || !isValid">
+                确定
+            </button>
+            <button class="cancel-button" @click="cancelSettings">
+                取消
+            </button>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 
-const rows = ref(10);
-const cols = ref(10);
-const mines = ref(10);
+const props = defineProps<{
+    initialSettings: {
+        width: number;
+        height: number;
+        mineCount: number;
+    };
+}>();
+
+const rows = ref(props.initialSettings.height);
+const cols = ref(props.initialSettings.width);
+const mines = ref(props.initialSettings.mineCount);
 const errorMessage = ref('');
 
 const maxMines = computed(() => rows.value * cols.value - 1);
@@ -40,7 +50,7 @@ const isValid = computed(() => {
         mines.value >= 1 && mines.value <= maxMines.value;
 });
 
-const validateAndEmit = () => {
+const validateAndUpdate = () => {
     errorMessage.value = '';
 
     if (rows.value < 6 || rows.value > 20) {
@@ -62,9 +72,14 @@ const validateAndEmit = () => {
     }
 };
 
-const startGame = () => {
+const emit = defineEmits<{
+    (e: 'save', settings: { width: number; height: number; mineCount: number }): void;
+    (e: 'cancel'): void;
+}>();
+
+const saveSettings = () => {
     if (isValid.value) {
-        emit('start', {
+        emit('save', {
             width: cols.value,
             height: rows.value,
             mineCount: mines.value
@@ -72,33 +87,38 @@ const startGame = () => {
     }
 };
 
-const emit = defineEmits<{
-    (e: 'start', settings: { width: number; height: number; mineCount: number }): void;
-}>();
+const cancelSettings = () => {
+    emit('cancel');
+};
 </script>
 
 <style scoped>
 .settings-panel {
+    min-width: 300px;
+}
+
+h2 {
     margin-bottom: 20px;
-    padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: #f9f9f9;
+    color: #333;
+    text-align: center;
 }
 
 .settings-form {
     display: flex;
-    gap: 20px;
-    margin-bottom: 15px;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
 }
 
 .form-group {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
 }
 
 .form-group label {
-    margin-bottom: 5px;
+    flex: 1;
     color: #666;
 }
 
@@ -107,30 +127,53 @@ const emit = defineEmits<{
     padding: 5px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    text-align: center;
 }
 
 .error-message {
     color: #ff4444;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
     font-size: 14px;
+    text-align: center;
 }
 
-.start-button {
-    padding: 8px 16px;
-    background-color: #4CAF50;
-    color: white;
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.save-button,
+.cancel-button {
+    padding: 8px 20px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
+    transition: background-color 0.3s;
 }
 
-.start-button:disabled {
+.save-button {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.save-button:hover:not(:disabled) {
+    background-color: #45a049;
+}
+
+.save-button:disabled {
     background-color: #cccccc;
     cursor: not-allowed;
 }
 
-.start-button:hover:not(:disabled) {
-    background-color: #45a049;
+.cancel-button {
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    color: #666;
+}
+
+.cancel-button:hover {
+    background-color: #e8e8e8;
 }
 </style>

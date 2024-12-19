@@ -1,10 +1,12 @@
 import { ref, computed } from 'vue';
 import { generateBoard } from '../utils';
+import type { CellState } from '@/types';
 
 export const useGame = (width: number, height: number, mineCount: number) => {
   const board = ref(generateBoard(width, height, mineCount));
   const gameOver = ref(false);
   const gameWon = ref(false);
+  const isFirstClick = ref(true);
 
   const remainingMines = computed(() => {
     let flagged = 0;
@@ -19,6 +21,18 @@ export const useGame = (width: number, height: number, mineCount: number) => {
   const revealCell = (x: number, y: number) => {
     if (gameOver.value || gameWon.value || board.value[y][x].isFlagged) {
       return;
+    }
+
+    // 如果是第一次点击，重新生成游戏板
+    if (isFirstClick.value) {
+      // 创建临时棋盘，直到成功找到一个有效的布局
+      let newBoard: CellState[][];
+      do {
+        newBoard = generateBoard(width, height, mineCount);
+      } while (newBoard[y][x].isMine || newBoard[y][x].neighborMines > 0);
+      
+      board.value = newBoard;
+      isFirstClick.value = false;
     }
 
     const cell = board.value[y][x];
@@ -70,6 +84,7 @@ export const useGame = (width: number, height: number, mineCount: number) => {
     board.value = generateBoard(width, height, mineCount);
     gameOver.value = false;
     gameWon.value = false;
+    isFirstClick.value = true;
   };
 
   return {
