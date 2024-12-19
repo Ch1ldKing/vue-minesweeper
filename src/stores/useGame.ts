@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import { generateBoard } from '../utils';
+import { generateBoard, handleFirstClick } from '../utils';
 import type { CellState } from '@/types';
 
 export const useGame = (width: number, height: number, mineCount: number) => {
@@ -23,15 +23,9 @@ export const useGame = (width: number, height: number, mineCount: number) => {
       return;
     }
 
-    // 如果是第一次点击，重新生成游戏板
+    // 处理第一次点击
     if (isFirstClick.value) {
-      // 创建临时棋盘，直到成功找到一个有效的布局
-      let newBoard: CellState[][];
-      do {
-        newBoard = generateBoard(width, height, mineCount);
-      } while (newBoard[y][x].isMine || newBoard[y][x].neighborMines > 0);
-      
-      board.value = newBoard;
+      handleFirstClick(board.value, x, y, width, height);
       isFirstClick.value = false;
     }
 
