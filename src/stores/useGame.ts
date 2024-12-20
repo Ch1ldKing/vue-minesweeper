@@ -1,6 +1,7 @@
+// useGame.ts
 import { ref, computed } from 'vue';
+import type { CellState } from '../types';
 import { generateBoard, handleFirstClick } from '../utils';
-import type { CellState } from '@/types';
 import { MinesweeperSolver } from '../solver';
 
 export const useGame = (width: number, height: number, mineCount: number) => {
@@ -101,17 +102,31 @@ export const useGame = (width: number, height: number, mineCount: number) => {
 
     try {
       while (!gameOver.value && !gameWon.value && isAutoPlaying.value) {
-        const safeMoves = solver.findSafeMoves();
-        if (safeMoves.length === 0) {
+        const move = solver.getNextMove();
+        if (move.positions.length === 0 && move.type !== 'wait') {
           isAutoPlaying.value = false;
           break;
         }
 
-        for (const move of safeMoves) {
+        // 处理等待状态
+        if (move.type === 'wait') {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          continue;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // 根据移动类型执行相应操作
+        for (const pos of move.positions) {
           if (!isAutoPlaying.value || gameOver.value || gameWon.value) break;
           
-          await new Promise(resolve => setTimeout(resolve, 200));
-          revealCell(move.x, move.y);
+          if (move.type === 'flag') {
+            toggleFlag(pos.x, pos.y);
+          } else {
+            revealCell(pos.x, pos.y);
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
     } catch (error) {

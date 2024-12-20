@@ -4,9 +4,10 @@ import type { CellState } from './types';
 interface CellInfo {
   x: number;
   y: number;
-  unknownNeighbors: number;
-  mineNeighbors: number;
+  cell: CellState;
+  unknownNeighbors: Array<{x: number, y: number}>;
   flaggedNeighbors: number;
+  value: number;
 }
 
 export class MinesweeperSolver {
@@ -20,127 +21,228 @@ export class MinesweeperSolver {
     this.height = height;
   }
 
-  // 获取一个格子周围的所有未知格子
-  private getUnknownNeighbors(x: number, y: number): {x: number, y: number}[] {
-    const neighbors: {x: number, y: number}[] = [];
+  private getNeighborInfo(x: number, y: number): CellInfo {
+    const cell = this.board[y][x];
+    const unknownNeighbors: Array<{x: number, y: number}> = [];
+    let flaggedNeighbors = 0;
+
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         if (dx === 0 && dy === 0) continue;
         const nx = x + dx;
         const ny = y + dy;
+        
         if (nx >= 0 && nx < this.width && ny >= 0 && ny < this.height) {
-          if (!this.board[ny][nx].isRevealed && !this.board[ny][nx].isFlagged) {
-            neighbors.push({x: nx, y: ny});
+          const neighbor = this.board[ny][nx];
+          if (neighbor.isFlagged) {
+            flaggedNeighbors++;
+          } else if (!neighbor.isRevealed) {
+            unknownNeighbors.push({x: nx, y: ny});
           }
         }
       }
     }
-    return neighbors;
+
+    return {
+      x,
+      y,
+      cell,
+      unknownNeighbors,
+      flaggedNeighbors,
+      value: cell.neighborMines
+    };
   }
 
-  // 获取一个格子周围的已标记地雷数量
-  private getFlaggedNeighborCount(x: number, y: number): number {
-    let count = 0;
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (dx === 0 && dy === 0) continue;
-        const nx = x + dx;
-        const ny = y + dy;
-        if (nx >= 0 && nx < this.width && ny >= 0 && ny < this.height) {
-          if (this.board[ny][nx].isFlagged) {
-            count++;
-          }
-        }
-      }
-    }
-    return count;
-  }
-
-  // 分析每个已知格子
-  private analyzeCells(): CellInfo[] {
-    const cellsInfo: CellInfo[] = [];
+  private getAllNumberedCells(): CellInfo[] {
+    const numberedCells: CellInfo[] = [];
     
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
         const cell = this.board[y][x];
         if (cell.isRevealed && !cell.isMine && cell.neighborMines > 0) {
-          const unknownNeighbors = this.getUnknownNeighbors(x, y);
-          const flaggedNeighbors = this.getFlaggedNeighborCount(x, y);
-          
-          if (unknownNeighbors.length > 0) {
-            cellsInfo.push({
-              x,
-              y,
-              unknownNeighbors: unknownNeighbors.length,
-              mineNeighbors: cell.neighborMines,
-              flaggedNeighbors
-            });
-          }
+          numberedCells.push(this.getNeighborInfo(x, y));
         }
       }
     }
-    
-    return cellsInfo;
+
+    return numberedCells;
   }
 
-  // 寻找安全的格子
-  public findSafeMoves(): {x: number, y: number}[] {
-    const safeMoves: {x: number, y: number}[] = [];
-    const cellsInfo = this.analyzeCells();
+  // 找出确定是地雷的格子
+  private findDefiniteMines(): Array<{x: number, y: number}> {
+    const mines = new Set<string>();
+    const numberedCells = this.getAllNumberedCells();
 
-    // 策略1：如果周围的未知格子数量等于地雷总数减去已标记数量，则其他未知格子都是安全的
-    for (const cellInfo of cellsInfo) {
-      const remainingMines = cellInfo.mineNeighbors - cellInfo.flaggedNeighbors;
-      if (remainingMines === 0 && cellInfo.unknownNeighbors > 0) {
-        const safeNeighbors = this.getUnknownNeighbors(cellInfo.x, cellInfo.y);
-        safeMoves.push(...safeNeighbors);
+    for (const info of numberedCells) {
+      const remainingMines = info.value - info.flaggedNeighbors;
+      if (remainingMines > 0 && remainingMines === info.unknownNeighbors.length) {
+        info.unknownNeighbors.forEach(pos => {
+          if (!this.board[pos.y][pos.x].isFlagged) {
+            mines.add(`${pos.x},${pos.y}`);
+          }
+        });
       }
     }
 
-    // 如果没有找到确定安全的格子，使用概率策略
-    if (safeMoves.length === 0) {
-      const probableMove = this.findProbableSafeMove();
-      if (probableMove) {
-        safeMoves.push(probableMove);
+    return Array.from(mines).map(pos => {
+      const [x, y] = pos.split(',').map(Number);
+      return {x, y};
+    });
+  }
+
+  // 找出确定安全的格子
+  private findDefiniteSafeCells(): Array<{x: number, y: number}> {
+    const safeCells = new Set<string>();
+    const numberedCells = this.getAllNumberedCells();
+
+    for (const info of numberedCells) {
+      if (info.value === info.flaggedNeighbors && info.unknownNeighbors.length > 0) {
+        info.unknownNeighbors.forEach(pos => {
+          if (!this.board[pos.y][pos.x].isRevealed && !this.board[pos.y][pos.x].isFlagged) {
+            safeCells.add(`${pos.x},${pos.y}`);
+          }
+        });
       }
     }
 
-    // 删除重复的移动
-    return Array.from(new Set(safeMoves.map(m => `${m.x},${m.y}`)))
-      .map(coord => {
-        const [x, y] = coord.split(',').map(Number);
-        return {x, y};
+    return Array.from(safeCells).map(pos => {
+      const [x, y] = pos.split(',').map(Number);
+      return {x, y};
+    });
+  }
+
+  // 计算每个未知格子的地雷概率
+  private calculateProbabilities(): Map<string, number> {
+    const probabilities = new Map<string, number>();
+    const counts = new Map<string, number>();
+    const numberedCells = this.getAllNumberedCells();
+
+    for (const info of numberedCells) {
+      const remainingMines = info.value - info.flaggedNeighbors;
+      if (remainingMines <= 0 || info.unknownNeighbors.length === 0) continue;
+
+      const probability = remainingMines / info.unknownNeighbors.length;
+      
+      for (const neighbor of info.unknownNeighbors) {
+        const key = `${neighbor.x},${neighbor.y}`;
+        const currentSum = probabilities.get(key) ?? 0;
+        const currentCount = counts.get(key) ?? 0;
+        
+        probabilities.set(key, currentSum + probability);
+        counts.set(key, currentCount + 1);
+      }
+    }
+
+    // 计算平均概率
+    const avgProbabilities = new Map<string, number>();
+    probabilities.forEach((sum, key) => {
+      const count = counts.get(key) ?? 1;
+      avgProbabilities.set(key, sum / count);
+    });
+
+    return avgProbabilities;
+  }
+
+  // 检查是否还有待处理的确定性推理
+  private hasDefiniteMoves(): boolean {
+    // 检查是否有确定的地雷
+    const definiteMineCells = this.findDefiniteMines();
+    if (definiteMineCells.length > 0) return true;
+
+    // 检查是否有确定安全的格子
+    const definiteSafeCells = this.findDefiniteSafeCells();
+    if (definiteSafeCells.length > 0) return true;
+
+    return false;
+  }
+
+  // 获取下一步操作
+  public getNextMove(): { type: 'flag' | 'reveal' | 'wait', positions: Array<{x: number, y: number}> } {
+    let moveFound = false;
+    let lastDefiniteMoves = new Set<string>();
+
+    // 持续进行确定性推理，直到无法得出新的确定结论
+    do {
+      moveFound = false;
+      
+      // 1. 找出确定是地雷的格子进行标记
+      const definiteMineCells = this.findDefiniteMines();
+      if (definiteMineCells.length > 0) {
+        // 检查是否有新的确定性推理结果
+        const currentMoves = new Set(definiteMineCells.map(pos => `${pos.x},${pos.y}`));
+        if (!this.areSetsEqual(currentMoves, lastDefiniteMoves)) {
+          return {
+            type: 'flag',
+            positions: definiteMineCells
+          };
+        }
+      }
+
+      // 2. 找出确定安全的格子进行点击
+      const definiteSafeCells = this.findDefiniteSafeCells();
+      if (definiteSafeCells.length > 0) {
+        return {
+          type: 'reveal',
+          positions: definiteSafeCells
+        };
+      }
+
+      // 记录当前的确定性推理结果
+      lastDefiniteMoves = new Set(definiteMineCells.map(pos => `${pos.x},${pos.y}`));
+      
+      // 如果还有未处理的确定性推理，继续循环
+      if (this.hasDefiniteMoves()) {
+        moveFound = true;
+        // 等待一下，让之前的操作生效
+        return {
+          type: 'wait',
+          positions: []
+        };
+      }
+    } while (moveFound);
+
+    // 3. 只有在确定性推理完全穷尽后，才使用概率分析
+    const probabilities = this.calculateProbabilities();
+    if (probabilities.size > 0) {
+      let minProb = 1;
+      let bestPositions: Array<{x: number, y: number}> = [];
+
+      probabilities.forEach((prob, key) => {
+        const [x, y] = key.split(',').map(Number);
+        if (prob < minProb) {
+          minProb = prob;
+          bestPositions = [{x, y}];
+        } else if (prob === minProb) {
+          bestPositions.push({x, y});
+        }
       });
-  }
 
-  // 寻找最可能安全的格子
-  private findProbableSafeMove(): {x: number, y: number} | null {
-    const cellsInfo = this.analyzeCells();
-    let bestProbability = 1;
-    let bestMove = null;
-
-    for (const cellInfo of cellsInfo) {
-      const unknownNeighbors = this.getUnknownNeighbors(cellInfo.x, cellInfo.y);
-      const remainingMines = cellInfo.mineNeighbors - cellInfo.flaggedNeighbors;
-      const probability = remainingMines / unknownNeighbors.length;
-
-      if (probability < bestProbability) {
-        bestProbability = probability;
-        bestMove = unknownNeighbors[0]; // 选择第一个未知邻居
-      }
+      return {
+        type: 'reveal',
+        positions: bestPositions
+      };
     }
 
-    // 如果没有找到任何可能的移动，随机选择一个未探索的格子
-    if (!bestMove) {
-      for (let y = 0; y < this.height; y++) {
-        for (let x = 0; x < this.width; x++) {
-          if (!this.board[y][x].isRevealed && !this.board[y][x].isFlagged) {
-            return {x, y};
-          }
+    // 4. 如果没有任何信息，随机选择一个未打开且未标记的格子
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (!this.board[y][x].isRevealed && !this.board[y][x].isFlagged) {
+          return {
+            type: 'reveal',
+            positions: [{x, y}]
+          };
         }
       }
     }
 
-    return bestMove;
+    return { type: 'reveal', positions: [] };
+  }
+
+  private areSetsEqual(a: Set<string>, b: Set<string>): boolean {
+    if (a.size !== b.size) return false;
+    for (const item of a) {
+      if (!b.has(item)) return false;
+    }
+    return true;
   }
 }
