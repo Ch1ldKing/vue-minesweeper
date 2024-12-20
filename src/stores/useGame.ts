@@ -1,12 +1,14 @@
 import { ref, computed } from 'vue';
 import { generateBoard, handleFirstClick } from '../utils';
 import type { CellState } from '@/types';
+import { MinesweeperSolver } from '../solver';
 
 export const useGame = (width: number, height: number, mineCount: number) => {
-  const board = ref(generateBoard(width, height, mineCount));
+  const board = ref<CellState[][]>(generateBoard(width, height, mineCount));
   const gameOver = ref(false);
   const gameWon = ref(false);
   const isFirstClick = ref(true);
+  const isAutoPlaying = ref(false);
 
   const remainingMines = computed(() => {
     let flagged = 0;
@@ -18,6 +20,23 @@ export const useGame = (width: number, height: number, mineCount: number) => {
     return mineCount - flagged;
   });
 
+  // 检查游戏是否胜利
+  const checkWinCondition = () => {
+    let allNonMinesRevealed = true;
+    board.value.forEach(row => {
+      row.forEach(cell => {
+        if (!cell.isMine && !cell.isRevealed) {
+          allNonMinesRevealed = false;
+        }
+      });
+    });
+    if (allNonMinesRevealed) {
+      gameWon.value = true;
+      isAutoPlaying.value = false;
+    }
+  };
+
+  // 揭示单元格
   const revealCell = (x: number, y: number) => {
     if (gameOver.value || gameWon.value || board.value[y][x].isFlagged) {
       return;
@@ -33,13 +52,14 @@ export const useGame = (width: number, height: number, mineCount: number) => {
     if (cell.isMine) {
       cell.isRevealed = true;
       gameOver.value = true;
+      isAutoPlaying.value = false;
       return;
     }
 
     if (!cell.isRevealed) {
       cell.isRevealed = true;
       
-      // 如果是空格子，递归展开周围的格子
+      // 如果是空白格，递归展开周围的格子
       if (cell.neighborMines === 0) {
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
@@ -56,29 +76,54 @@ export const useGame = (width: number, height: number, mineCount: number) => {
     checkWinCondition();
   };
 
+  // 切换旗子
   const toggleFlag = (x: number, y: number) => {
     if (!gameOver.value && !gameWon.value && !board.value[y][x].isRevealed) {
       board.value[y][x].isFlagged = !board.value[y][x].isFlagged;
     }
   };
 
-  const checkWinCondition = () => {
-    let allNonMinesRevealed = true;
-    board.value.forEach(row => {
-      row.forEach(cell => {
-        if (!cell.isMine && !cell.isRevealed) {
-          allNonMinesRevealed = false;
-        }
-      });
-    });
-    gameWon.value = allNonMinesRevealed;
-  };
-
+  // 重置游戏
   const resetGame = () => {
+    isAutoPlaying.value = false;
     board.value = generateBoard(width, height, mineCount);
     gameOver.value = false;
     gameWon.value = false;
     isFirstClick.value = true;
+  };
+
+  // 自动玩游戏
+  const autoPlay = async () => {
+    if (gameOver.value || gameWon.value || isAutoPlaying.value) return;
+
+    isAutoPlaying.value = true;
+    const solver = new MinesweeperSolver(board.value, width, height);
+
+    try {
+      while (!gameOver.value && !gameWon.value && isAutoPlaying.value) {
+        const safeMoves = solver.findSafeMoves();
+        if (safeMoves.length === 0) {
+          isAutoPlaying.value = false;
+          break;
+        }
+
+        for (const move of safeMoves) {
+          if (!isAutoPlaying.value || gameOver.value || gameWon.value) break;
+          
+          await new Promise(resolve => setTimeout(resolve, 200));
+          revealCell(move.x, move.y);
+        }
+      }
+    } catch (error) {
+      console.error('Auto play error:', error);
+    } finally {
+      isAutoPlaying.value = false;
+    }
+  };
+
+  // 停止自动玩游戏
+  const stopAutoPlay = () => {
+    isAutoPlaying.value = false;
   };
 
   return {
@@ -88,6 +133,9 @@ export const useGame = (width: number, height: number, mineCount: number) => {
     remainingMines,
     revealCell,
     toggleFlag,
-    resetGame
+    resetGame,
+    isAutoPlaying,
+    autoPlay,
+    stopAutoPlay
   };
 };
