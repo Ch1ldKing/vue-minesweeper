@@ -215,11 +215,6 @@ export class MinesweeperSolver {
       }
 
       // 2. 找出确定安全的格子进行点击
-      /*
-      1. 获取所有已揭示的数字格子，对每个数字格子进行如下处理：
-        判断这个格子的数字是否等于周围已插旗数，且未揭示的格子数>0，满足的话
-        
-      */
       const definiteSafeCells = this.findDefiniteSafeCells();
       if (definiteSafeCells.length > 0) {
         return {
@@ -246,21 +241,23 @@ export class MinesweeperSolver {
     const probabilities = this.calculateProbabilities();
     if (probabilities.size > 0) {
       let minProb = 1;
-      let bestPositions: Array<{x: number, y: number}> = [];
+      let bestMoves: Array<{x: number, y: number}> = [];
 
       probabilities.forEach((prob, key) => {
         const [x, y] = key.split(',').map(Number);
         if (prob < minProb) {
           minProb = prob;
-          bestPositions = [{x, y}];
+          bestMoves = [{x, y}];
         } else if (prob === minProb) {
-          bestPositions.push({x, y});
+          bestMoves.push({x, y});
         }
       });
 
+      // 从概率相同的移动中随机选择一个
+      const randomIndex = Math.floor(Math.random() * bestMoves.length);
       return {
         type: 'reveal',
-        positions: bestPositions
+        positions: [bestMoves[randomIndex]]  // 只返回一个移动
       };
     }
 
