@@ -156,8 +156,44 @@ export class MinesweeperSolver {
     return false;
   }
 
+  // 检查是否是第一次点击（没有任何已揭示的格子）
+  private isFirstClick(): boolean {
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        if (this.board[y][x].isRevealed) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  // 选择首次点击的位置
+  private getFirstClickPosition(): {x: number, y: number} {
+    // 定义内部区域的范围（排除边缘2格）
+    const marginSize = 2;
+    const innerStartX = Math.min(marginSize, Math.floor(this.width * 0.2));
+    const innerStartY = Math.min(marginSize, Math.floor(this.height * 0.2));
+    const innerEndX = Math.max(this.width - marginSize, Math.ceil(this.width * 0.8));
+    const innerEndY = Math.max(this.height - marginSize, Math.ceil(this.height * 0.8));
+
+    // 在内部区域随机选择一个位置
+    const x = innerStartX + Math.floor(Math.random() * (innerEndX - innerStartX));
+    const y = innerStartY + Math.floor(Math.random() * (innerEndY - innerStartY));
+
+    return {x, y};
+  }
+
   // 获取下一步操作
   public getNextMove(): { type: 'flag' | 'reveal' | 'wait', positions: Array<{x: number, y: number}> } {
+    // 处理首次点击
+    if (this.isFirstClick()) {
+      return {
+        type: 'reveal',
+        positions: [this.getFirstClickPosition()]
+      };
+    }
+
     let moveFound = false;
     let lastDefiniteMoves = new Set<string>();
 
@@ -179,6 +215,11 @@ export class MinesweeperSolver {
       }
 
       // 2. 找出确定安全的格子进行点击
+      /*
+      1. 获取所有已揭示的数字格子，对每个数字格子进行如下处理：
+        判断这个格子的数字是否等于周围已插旗数，且未揭示的格子数>0，满足的话
+        
+      */
       const definiteSafeCells = this.findDefiniteSafeCells();
       if (definiteSafeCells.length > 0) {
         return {
