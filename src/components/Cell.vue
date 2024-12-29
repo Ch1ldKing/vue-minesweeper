@@ -2,20 +2,23 @@
   <button class="cell" :class="{
     revealed: modelValue.isRevealed,
     mine: modelValue.isRevealed && modelValue.isMine,
-    flagged: modelValue.isFlagged
-  }" @click="$emit('reveal')" @contextmenu.prevent="$emit('flag')">
-    <template v-if="modelValue.isRevealed && !modelValue.isMine">
-      {{ modelValue.neighborMines || '' }}
-    </template>
-    <template v-else-if="modelValue.isRevealed && modelValue.isMine">
-      💣
-    </template>
-    <template v-else-if="modelValue.isFlagged">
-      🚩
-    </template>
+    flagged: modelValue.isFlagged,
+    'mine-reveal': modelValue.isRevealed && modelValue.isMine
+  }" :data-number="modelValue.isRevealed && !modelValue.isMine ? modelValue.neighborMines : undefined"
+    @click="$emit('reveal')" @contextmenu.prevent="$emit('flag')">
+    <transition name="fade">
+      <template v-if="modelValue.isRevealed && !modelValue.isMine">
+        {{ modelValue.neighborMines || '' }}
+      </template>
+      <template v-else-if="modelValue.isRevealed && modelValue.isMine">
+        💣
+      </template>
+      <template v-else-if="modelValue.isFlagged">
+        🚩
+      </template>
+    </transition>
   </button>
 </template>
-
 <script setup lang="ts">
 import type { CellState } from '../types';
 
@@ -38,10 +41,14 @@ defineEmits<{
   font-weight: bold;
   font-size: 18px;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .cell.revealed {
   background: #eee;
+  transition: background-color 0.3s ease;
 }
 
 .cell.mine {
@@ -51,4 +58,78 @@ defineEmits<{
 .cell:not(.revealed):hover {
   background: #ddd;
 }
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* 数字显示动画 */
+.cell.revealed:not(.mine) {
+  color: transparent;
+  animation: numberReveal 0.3s ease forwards;
+}
+
+@keyframes numberReveal {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    color: inherit;
+  }
+}
+
+.cell[data-number="1"] {
+  color: #0000FF;
+}
+
+/* 蓝色 */
+.cell[data-number="2"] {
+  color: #008000;
+}
+
+/* 绿色 */
+.cell[data-number="3"] {
+  color: #FF0000;
+}
+
+/* 红色 */
+.cell[data-number="4"] {
+  color: #000080;
+}
+
+/* 深蓝色 */
+.cell[data-number="5"] {
+  color: #800000;
+}
+
+/* 深红色 */
+.cell[data-number="6"] {
+  color: #008080;
+}
+
+/* 青色 */
+.cell[data-number="7"] {
+  color: #000000;
+}
+
+/* 黑色 */
+.cell[data-number="8"] {
+  color: #808080;
+}
+
+/* 灰色 */
 </style>
