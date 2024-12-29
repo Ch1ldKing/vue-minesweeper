@@ -6,13 +6,15 @@
 
       <div class="game-area">
         <Board :key="gameKey" :width="settings.width" :height="settings.height" :mine-count="settings.mineCount"
-          @game-over="handleGameOver" @game-won="handleGameWon" />
+          @game-over="handleGameOver" @game-won="handleGameWon" @state-change="handleStateChange" />
       </div>
 
       <div class="control-panel">
         <div class="game-info">
           <p>当前难度：{{ settings.width }}×{{ settings.height }}</p>
-          <p>地雷数量：{{ settings.mineCount }}</p>
+          <p>{{ gameState.isPlacingMode
+            ? `已放置地雷: ${gameState.currentMineCount}`
+            : `地雷数量：${gameState.currentMineCount}` }}</p>
         </div>
         <div class="controls">
           <button class="control-button" @click="showSettings = true">
@@ -37,6 +39,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import Board from './components/Board.vue';
+
 import GameSettings from './components/GameSettings.vue';
 
 interface GameSettings {
@@ -51,6 +54,12 @@ const settings = ref<GameSettings>({
   width: 10,
   height: 10,
   mineCount: 10
+});
+
+// 添加游戏状态
+const gameState = ref({
+  currentMineCount: 10,
+  isPlacingMode: false
 });
 
 const updateSettings = (newSettings: GameSettings) => {
@@ -69,6 +78,11 @@ const handleGameOver = () => {
 
 const handleGameWon = () => {
   // 可以添加游戏胜利的处理逻辑
+};
+
+// 处理状态变化
+const handleStateChange = (state: { currentMineCount: number; isPlacingMode: boolean }) => {
+  gameState.value = state;
 };
 </script>
 

@@ -1,7 +1,7 @@
 // useGame.ts
 import { ref, computed } from 'vue';
 import type { CellState } from '../types';
-import { generateBoard, handleFirstClick } from '../utils';
+import { generateBoard, handleFirstClick, calculateNeighborMines } from '../utils';
 import { MinesweeperSolver } from '../solver';
 
 export const useGame = (width: number, height: number, mineCount: number) => {
@@ -10,6 +10,8 @@ export const useGame = (width: number, height: number, mineCount: number) => {
   const gameWon = ref(false);
   const isFirstClick = ref(true);
   const isAutoPlaying = ref(false);
+  const isPlacingMode = ref(false);
+  const currentMineCount = ref(mineCount);  
 
   const remainingMines = computed(() => {
     let flagged = 0;
@@ -18,7 +20,7 @@ export const useGame = (width: number, height: number, mineCount: number) => {
         if (cell.isFlagged) flagged++;
       });
     });
-    return mineCount - flagged;
+    return currentMineCount.value - flagged;
   });
 
   // 检查游戏是否胜利
@@ -87,7 +89,7 @@ export const useGame = (width: number, height: number, mineCount: number) => {
   // 重置游戏
   const resetGame = () => {
     isAutoPlaying.value = false;
-    board.value = generateBoard(width, height, mineCount);
+    board.value = generateBoard(width, height, currentMineCount.value);
     gameOver.value = false;
     gameWon.value = false;
     isFirstClick.value = true;
@@ -141,6 +143,70 @@ export const useGame = (width: number, height: number, mineCount: number) => {
     isAutoPlaying.value = false;
   };
 
+  // 切换布置模式
+  const togglePlacingMode = () => {
+    if (!gameOver.value && !gameWon.value) {
+      isPlacingMode.value = !isPlacingMode.value;
+      if (isPlacingMode.value) {
+        // 重置游戏板为空，准备布置
+        board.value = Array(height).fill(null).map(() =>
+          Array(width).fill(null).map(() => ({
+            isMine: false,
+            isRevealed: false,
+            isFlagged: false,
+            neighborMines: 0
+          }))
+        );
+      }
+    }
+  };
+
+
+  // 修改 toggleMine 函数，实时更新地雷数
+  const toggleMine = (x: number, y: number) => {
+    if (!isPlacingMode.value) return;
+    
+    const cell = board.value[y][x];
+    cell.isMine = !cell.isMine;
+    
+    // 更新地雷数量
+    let count = 0;
+    board.value.forEach(row => {
+      row.forEach(cell => {
+        if (cell.isMine) count++;
+      });
+    });
+    currentMineCount.value = count;
+    
+    // 更新周围格子的地雷数
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const ny = y + dy;
+        const nx = x + dx;
+        if (ny >= 0 && ny < height && nx >= 0 && nx < width && !board.value[ny][nx].isMine) {
+          board.value[ny][nx].neighborMines = calculateNeighborMines(board.value, nx, ny, width, height);
+        }
+      }
+    }
+  };
+
+
+  // 完成布置
+  const finishPlacing = () => {
+    let placedMines = currentMineCount.value;
+    board.value.forEach(row => {
+      row.forEach(cell => {
+        if (cell.isMine) placedMines++;
+      });
+    });
+    
+    if (placedMines > 0) {
+      isPlacingMode.value = false;
+      isFirstClick.value = false; // 跳过第一次点击保护
+    }
+    
+    return placedMines;
+  };
   return {
     board,
     gameOver,
@@ -151,6 +217,11 @@ export const useGame = (width: number, height: number, mineCount: number) => {
     resetGame,
     isAutoPlaying,
     autoPlay,
-    stopAutoPlay
+    stopAutoPlay,
+    currentMineCount,
+    isPlacingMode,
+    togglePlacingMode,
+    toggleMine,
+    finishPlacing
   };
 };

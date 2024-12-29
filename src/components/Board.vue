@@ -2,18 +2,22 @@
   <div class="game-container">
     <div class="game-info">
       <button @click="resetGame">重新开始</button>
-      <button @click="isAutoPlaying ? stopAutoPlay() : autoPlay()" :disabled="gameOver || gameWon">
+      <button @click="handlePlacingMode" :disabled="gameOver || gameWon">
+        {{ isPlacingMode ? '完成布置' : '布置地雷' }}
+      </button>
+      <button v-if="!isPlacingMode" @click="isAutoPlaying ? stopAutoPlay() : autoPlay()"
+        :disabled="gameOver || gameWon">
         {{ isAutoPlaying ? '停止自动挖雷' : '自动挖雷' }}
       </button>
-      <span>剩余地雷: {{ remainingMines }}</span>
+      <span>{{ isPlacingMode ? `已放置地雷: ${currentMineCount}` : `剩余地雷: ${remainingMines}` }}</span>
       <span v-if="gameOver">游戏结束!</span>
       <span v-if="gameWon">胜利!</span>
     </div>
 
     <div class="board" :style="{ gridTemplateColumns: `repeat(${width}, 40px)` }">
       <template v-for="(row, y) in board" :key="y">
-        <Cell v-for="(cell, x) in row" :key="`${x}-${y}`" v-model="board[y][x]" @reveal="revealCell(x, y)"
-          @flag="toggleFlag(x, y)" />
+        <Cell v-for="(cell, x) in row" :key="`${x}-${y}`" v-model="board[y][x]" :placing-mode="isPlacingMode"
+          @reveal="handleCellClick(x, y)" @flag="toggleFlag(x, y)" />
       </template>
     </div>
     <!-- 游戏结束遮罩 -->
@@ -42,7 +46,28 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'gameOver'): void;
   (e: 'gameWon'): void;
+  (e: 'stateChange', state: { currentMineCount: number; isPlacingMode: boolean }): void;
 }>();
+
+const handleCellClick = (x: number, y: number) => {
+  if (isPlacingMode.value) {
+    toggleMine(x, y);
+  } else {
+    revealCell(x, y);
+  }
+};
+
+const handlePlacingMode = () => {
+  if (isPlacingMode.value) {
+    const placedMines = finishPlacing();
+    if (placedMines === 0) {
+      alert('请至少放置一个地雷！');
+    }
+  } else {
+    togglePlacingMode();
+  }
+};
+
 
 const {
   board,
@@ -54,7 +79,12 @@ const {
   resetGame,
   isAutoPlaying,
   autoPlay,
-  stopAutoPlay
+  stopAutoPlay,
+  isPlacingMode,
+  togglePlacingMode,
+  toggleMine,
+  finishPlacing,
+  currentMineCount
 } = useGame(props.width, props.height, props.mineCount);
 
 // 遮罩显示状态
@@ -71,6 +101,13 @@ watch(gameOver, (newValue) => {
       showGameOverOverlay.value = false;
     }, 2000);
   }
+});
+
+watch([currentMineCount, isPlacingMode], ([count, placing]) => {
+  emit('stateChange', {
+    currentMineCount: count,
+    isPlacingMode: placing
+  });
 });
 
 // 组件卸载时停止自动挖雷

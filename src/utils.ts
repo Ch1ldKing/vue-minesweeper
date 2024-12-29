@@ -1,7 +1,7 @@
 import type { CellState } from '@/types';
 // utils.ts
 // 计算指定位置周围的地雷数
-const calculateNeighborMines = (board: CellState[][], x: number, y: number, width: number, height: number): number => {
+export const calculateNeighborMines = (board: CellState[][], x: number, y: number, width: number, height: number): number => {
   let count = 0;
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {

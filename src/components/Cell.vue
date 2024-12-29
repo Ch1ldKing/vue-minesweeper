@@ -3,6 +3,7 @@
     revealed: modelValue.isRevealed,
     mine: modelValue.isRevealed && modelValue.isMine,
     flagged: modelValue.isFlagged,
+    'mine-placing': placingMode && modelValue.isMine,
     'mine-reveal': modelValue.isRevealed && modelValue.isMine
   }" :data-number="modelValue.isRevealed && !modelValue.isMine ? modelValue.neighborMines : undefined"
     @click="$emit('reveal')" @contextmenu.prevent="$emit('flag')">
@@ -10,7 +11,7 @@
       <template v-if="modelValue.isRevealed && !modelValue.isMine">
         {{ modelValue.neighborMines || '' }}
       </template>
-      <template v-else-if="modelValue.isRevealed && modelValue.isMine">
+      <template v-else-if="(modelValue.isRevealed && modelValue.isMine) || (placingMode && modelValue.isMine)">
         💣
       </template>
       <template v-else-if="modelValue.isFlagged">
@@ -19,17 +20,20 @@
     </transition>
   </button>
 </template>
+
 <script setup lang="ts">
 import type { CellState } from '../types';
 
 defineProps<{
   modelValue: CellState;
+  placingMode?: boolean;
 }>();
 
 defineEmits<{
   (e: 'reveal'): void;
   (e: 'flag'): void;
 }>();
+
 </script>
 
 <style scoped>
@@ -49,6 +53,11 @@ defineEmits<{
 .cell.revealed {
   background: #eee;
   transition: background-color 0.3s ease;
+}
+
+.cell.mine-placing {
+  background: #ffeb3b;
+  opacity: 0.8;
 }
 
 .cell.mine {
@@ -88,48 +97,49 @@ defineEmits<{
   100% {
     transform: scale(1);
     opacity: 1;
-    color: inherit;
+    color: inherit !important;
   }
 }
 
 .cell[data-number="1"] {
-  color: #0000FF;
+  color: #0000FF !important;
+  /* 蓝色 */
 }
 
-/* 蓝色 */
 .cell[data-number="2"] {
-  color: #008000;
+  color: #008000 !important;
+  /* 绿色 */
 }
 
-/* 绿色 */
 .cell[data-number="3"] {
-  color: #FF0000;
+  color: #FF0000 !important;
+  /* 红色 */
 }
 
-/* 红色 */
 .cell[data-number="4"] {
-  color: #000080;
+  color: #000080 !important;
+  /* 深蓝色 */
 }
 
-/* 深蓝色 */
 .cell[data-number="5"] {
-  color: #800000;
+  color: #800000 !important;
+  /* 深红色 */
 }
 
-/* 深红色 */
 .cell[data-number="6"] {
-  color: #008080;
+  color: #008080 !important;
+  /* 青色 */
 }
 
-/* 青色 */
 .cell[data-number="7"] {
-  color: #000000;
+  color: #000000 !important;
+  /* 黑色 */
 }
 
-/* 黑色 */
 .cell[data-number="8"] {
-  color: #808080;
+  color: #808080 !important;
+  /* 灰色 */
 }
 
-/* 灰色 */
+
 </style>
