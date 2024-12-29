@@ -25,18 +25,12 @@
             </button>
         </div>
 
-        <div class="game-status">
-            <p>当前状态:
-                <span v-if="gameWon" class="status-won">🎉 胜利!</span>
-                <span v-else-if="gameOver" class="status-lost">💥 游戏结束</span>
-                <span v-else class="status-playing">游戏进行中</span>
-            </p>
-        </div>
+
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const props = defineProps<{
     initialSettings: {
@@ -70,6 +64,13 @@ const isValid = computed(() => {
         mines.value >= 1 && mines.value <= maxMines.value;
 });
 
+// 监听 props 的变化并更新本地状态
+watch(() => props.initialSettings, (newSettings) => {
+    rows.value = newSettings.height;
+    cols.value = newSettings.width;
+    mines.value = newSettings.mineCount;
+}, { immediate: true });
+
 const validateAndUpdate = () => {
     errorMessage.value = '';
 
@@ -100,6 +101,13 @@ const handleChangeSetting = () => {
             mineCount: mines.value
         });
     }
+};
+
+const resetSettings = () => {
+    rows.value = props.initialSettings.height;
+    cols.value = props.initialSettings.width;
+    mines.value = props.initialSettings.mineCount;
+    errorMessage.value = '';
 };
 </script>
 

@@ -24,12 +24,6 @@
           @reveal="handleCellClick(x, y)" @flag="toggleFlag(x, y)" />
       </template>
     </div>
-    <div v-if="showGameOverOverlay" class="game-over-overlay">
-      <div class="game-over-text">游戏结束!</div>
-    </div>
-    <div v-if="showWinOverlay" class="game-win-overlay">
-      <div class="game-win-text">胜利!</div>
-    </div>
   </div>
 </template>
 
