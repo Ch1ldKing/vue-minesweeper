@@ -1,46 +1,31 @@
+# App.vue
 <template>
   <div class="app">
     <h1 class="title">Vue Minesweeper</h1>
 
     <div class="content-wrapper">
-
       <div class="game-area">
         <Board :key="gameKey" :width="settings.width" :height="settings.height" :mine-count="settings.mineCount"
-          @game-over="handleGameOver" @game-won="handleGameWon" @state-change="handleStateChange" />
+          :board="board" :game-over="gameState.gameOver" :game-won="gameState.gameWon"
+          :is-placing-mode="gameState.isPlacingMode" :current-mine-count="gameState.currentMineCount"
+          :remaining-mines="remainingMines" @reveal="revealCell" @flag="toggleFlag" @reset="resetGame" />
       </div>
 
-      <div class="control-panel">
-        <div class="game-info">
-          <p>当前难度：{{ settings.width }}×{{ settings.height }}</p>
-          <p>{{ gameState.isPlacingMode
-            ? `已放置地雷: ${gameState.currentMineCount}`
-            : `地雷数量：${gameState.currentMineCount}` }}</p>
-        </div>
-        <div class="controls">
-          <button class="control-button" @click="showSettings = true">
-            自定义游戏
-          </button>
-          <button class="control-button" @click="resetGame">
-            重新开始
-          </button>
-        </div>
-      </div>
-    </div>
-
-
-    <div v-if="showSettings" class="modal-overlay" @click.self="showSettings = false">
-      <div class="modal-content">
-        <GameSettings :initial-settings="settings" @save="updateSettings" @cancel="showSettings = false" />
+      <div class="settings-area">
+        <GameSettings :initial-settings="settings" :game-over="gameState.gameOver" :game-won="gameState.gameWon"
+          :is-placing-mode="gameState.isPlacingMode" :is-auto-playing="gameState.isAutoPlaying"
+          :current-mine-count="gameState.currentMineCount" @update="updateSettings" @reset="resetGame"
+          @toggle-placing-mode="handleTogglePlacingMode" @toggle-auto-play="handleToggleAutoPlay" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import Board from './components/Board.vue';
-
 import GameSettings from './components/GameSettings.vue';
+import {useGame} from './stores/useGame';
 
 interface GameSettings {
   width: number;
@@ -48,7 +33,6 @@ interface GameSettings {
   mineCount: number;
 }
 
-const showSettings = ref(false);
 const gameKey = ref(0);
 const settings = ref<GameSettings>({
   width: 10,
@@ -56,35 +40,83 @@ const settings = ref<GameSettings>({
   mineCount: 10
 });
 
-// 添加游戏状态
 const gameState = ref({
   currentMineCount: 10,
-  isPlacingMode: false
+  isPlacingMode: false,
+  isAutoPlaying: false,
+  gameOver: false,
+  gameWon: false
+});
+
+// 初始化游戏逻辑
+const {
+  board,
+  gameOver,
+  gameWon,
+  remainingMines,
+  revealCell,
+  toggleFlag,
+  resetGame,
+  isAutoPlaying,
+  autoPlay,
+  stopAutoPlay,
+  currentMineCount,
+  isPlacingMode,
+  togglePlacingMode,
+  toggleMine,
+  finishPlacing
+} = useGame(settings.value.width, settings.value.height, settings.value.mineCount);
+
+// 监听游戏状态变化
+watch(gameOver, (value) => {
+  gameState.value.gameOver = value;
+  if (value) {
+    gameState.value.isAutoPlaying = false;
+  }
+});
+
+watch(gameWon, (value) => {
+  gameState.value.gameWon = value;
+  if (value) {
+    gameState.value.isAutoPlaying = false;
+  }
+});
+
+watch([currentMineCount, isPlacingMode], ([count, placing]) => {
+  gameState.value.currentMineCount = count;
+  gameState.value.isPlacingMode = placing;
+});
+
+watch(isAutoPlaying, (value) => {
+  gameState.value.isAutoPlaying = value;
 });
 
 const updateSettings = (newSettings: GameSettings) => {
   settings.value = newSettings;
-  showSettings.value = false;
   gameKey.value++; // 强制重新创建游戏板
 };
 
-const resetGame = () => {
-  gameKey.value++; // 重置游戏
+const handleTogglePlacingMode = () => {
+  if (gameState.value.isPlacingMode) {
+    const placedMines = finishPlacing();
+    if (placedMines === 0) {
+      alert('请至少放置一个地雷！');
+      return;
+    }
+  } else {
+    togglePlacingMode();
+  }
 };
 
-const handleGameOver = () => {
-  // 可以添加游戏结束的处理逻辑
-};
-
-const handleGameWon = () => {
-  // 可以添加游戏胜利的处理逻辑
-};
-
-// 处理状态变化
-const handleStateChange = (state: { currentMineCount: number; isPlacingMode: boolean }) => {
-  gameState.value = state;
+const handleToggleAutoPlay = () => {
+  if (gameState.value.isAutoPlaying) {
+    stopAutoPlay();
+  } else {
+    autoPlay();
+  }
 };
 </script>
+
 
 <style scoped>
 .app {
@@ -114,107 +146,23 @@ const handleStateChange = (state: { currentMineCount: number; isPlacingMode: boo
   min-width: 300px;
 }
 
-.control-panel {
+.settings-area {
   flex: 0 1 300px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   min-width: 250px;
 }
 
-.game-info {
-  margin-bottom: 20px;
-}
-
-.game-info p {
-  margin: 10px 0;
-  color: #4a5568;
-  font-size: 1.1rem;
-}
-
-.controls {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.control-button {
-  padding: 12px 20px;
-  border: none;
-  border-radius: 8px;
-  background: #4CAF50;
-  color: white;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
-
-.control-button:hover {
-  background: #45a049;
-  transform: translateY(-1px);
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  max-width: 90%;
-  max-height: 90%;
-  overflow-y: auto;
-}
-
-/* 响应式布局 */
 @media (max-width: 768px) {
   .content-wrapper {
     flex-direction: column;
     align-items: center;
   }
 
-  .control-panel {
+  .settings-area {
     width: 100%;
     max-width: 400px;
   }
-
-  .controls {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .control-button {
-    flex: 1 1 auto;
-    min-width: 150px;
-  }
 }
 
-@import './apple-style.css';
-
-/* 添加模态框动画 */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-
-/* 大屏幕布局 */
 @media (min-width: 1024px) {
   .content-wrapper {
     justify-content: space-between;
@@ -228,9 +176,8 @@ const handleStateChange = (state: { currentMineCount: number; isPlacingMode: boo
     margin-right: 40px;
   }
 
-  .control-panel {
+  .settings-area {
     flex: 0 0 300px;
-    align-self: flex-start;
     position: sticky;
     top: 20px;
   }

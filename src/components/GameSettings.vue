@@ -1,6 +1,6 @@
 <template>
     <div class="settings-panel">
-        <h2>自定义游戏设置</h2>
+        <h2>游戏设置</h2>
         <div class="settings-form">
             <div class="form-group">
                 <label>行数 (6-20):</label>
@@ -16,19 +16,27 @@
             </div>
         </div>
         <div class="error-message" v-if="errorMessage">{{ errorMessage }}</div>
-        <div class="button-group">
-            <button class="save-button" @click="saveSettings" :disabled="!!errorMessage || !isValid">
-                确定
+
+        <!-- 游戏控制按钮 -->
+        <div class="game-controls">
+            <button class="control-button" @click="handleChangeSetting"
+                :disabled="!!errorMessage || !isValid || isPlacingMode">
+                应用设置
             </button>
-            <button class="cancel-button" @click="cancelSettings">
-                取消
-            </button>
+        </div>
+
+        <div class="game-status">
+            <p>当前状态:
+                <span v-if="gameWon" class="status-won">🎉 胜利!</span>
+                <span v-else-if="gameOver" class="status-lost">💥 游戏结束</span>
+                <span v-else class="status-playing">游戏进行中</span>
+            </p>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps<{
     initialSettings: {
@@ -36,6 +44,18 @@ const props = defineProps<{
         height: number;
         mineCount: number;
     };
+    gameOver: boolean;
+    gameWon: boolean;
+    isPlacingMode: boolean;
+    isAutoPlaying: boolean;
+    currentMineCount: number;
+}>();
+
+const emit = defineEmits<{
+    (e: 'update', settings: { width: number; height: number; mineCount: number }): void;
+    (e: 'reset'): void;
+    (e: 'toggle-placing-mode'): void;
+    (e: 'toggle-auto-play'): void;
 }>();
 
 const rows = ref(props.initialSettings.height);
@@ -72,28 +92,23 @@ const validateAndUpdate = () => {
     }
 };
 
-const emit = defineEmits<{
-    (e: 'save', settings: { width: number; height: number; mineCount: number }): void;
-    (e: 'cancel'): void;
-}>();
-
-const saveSettings = () => {
+const handleChangeSetting = () => {
     if (isValid.value) {
-        emit('save', {
+        emit('update', {
             width: cols.value,
             height: rows.value,
             mineCount: mines.value
         });
     }
 };
-
-const cancelSettings = () => {
-    emit('cancel');
-};
 </script>
 
 <style scoped>
 .settings-panel {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     min-width: 300px;
 }
 
@@ -137,43 +152,71 @@ h2 {
     text-align: center;
 }
 
-.button-group {
+.game-controls {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     gap: 10px;
+    margin-top: 20px;
 }
 
-.save-button,
-.cancel-button {
-    padding: 8px 20px;
+.control-button {
+    padding: 10px 16px;
     border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s;
-}
-
-.save-button {
-    background-color: #4CAF50;
+    border-radius: 8px;
+    background: #007aff;
     color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.save-button:hover:not(:disabled) {
-    background-color: #45a049;
+.control-button:hover:not(:disabled) {
+    background: #005bb5;
+    transform: translateY(-1px);
 }
 
-.save-button:disabled {
+.control-button:disabled {
     background-color: #cccccc;
     cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
 }
 
-.cancel-button {
-    background-color: #f5f5f5;
-    border: 1px solid #ddd;
-    color: #666;
+.game-status {
+    margin-top: 20px;
+    padding: 10px;
+    background: #fff;
+    border-radius: 8px;
+    text-align: center;
 }
 
-.cancel-button:hover {
-    background-color: #e8e8e8;
+.game-status p {
+    margin: 0;
+    color: #333;
+    font-weight: bold;
+}
+
+.status-won {
+    color: #4cd964;
+}
+
+.status-lost {
+    color: #ff3b30;
+}
+
+.status-placing {
+    color: #007aff;
+}
+
+.status-playing {
+    color: #5856d6;
+}
+
+@media (max-width: 768px) {
+    .settings-panel {
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+    }
 }
 </style>
