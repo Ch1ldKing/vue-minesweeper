@@ -1,17 +1,21 @@
 <template>
   <div class="game-container">
     <div class="game-info">
-      <button @click="resetGame">重新开始</button>
+
       <button @click="handlePlacingMode" :disabled="gameOver || gameWon">
         {{ isPlacingMode ? '完成布置' : '布置地雷' }}
+      </button>
+      <!-- 剩余雷数显示为按钮 -->
+      <button class="status-button" @click="resetGame" :class="{ 'win': gameWon, 'lose': gameOver }">
+        <span v-if="gameWon">😄</span>
+        <span v-else-if="gameOver">😢</span>
+        <span v-else>{{ isPlacingMode ? `已放置地雷: ${currentMineCount}` : `💣 x ${remainingMines}` }}</span>
       </button>
       <button v-if="!isPlacingMode" @click="isAutoPlaying ? stopAutoPlay() : autoPlay()"
         :disabled="gameOver || gameWon">
         {{ isAutoPlaying ? '停止自动挖雷' : '自动挖雷' }}
       </button>
-      <span>{{ isPlacingMode ? `已放置地雷: ${currentMineCount}` : `剩余地雷: ${remainingMines}` }}</span>
-      <span v-if="gameOver">游戏结束!</span>
-      <span v-if="gameWon">胜利!</span>
+
     </div>
 
     <div class="board" :style="{ gridTemplateColumns: `repeat(${width}, 40px)` }">
@@ -20,12 +24,9 @@
           @reveal="handleCellClick(x, y)" @flag="toggleFlag(x, y)" />
       </template>
     </div>
-    <!-- 游戏结束遮罩 -->
     <div v-if="showGameOverOverlay" class="game-over-overlay">
       <div class="game-over-text">游戏结束!</div>
     </div>
-
-    <!-- 游戏胜利遮罩 -->
     <div v-if="showWinOverlay" class="game-win-overlay">
       <div class="game-win-text">胜利!</div>
     </div>
@@ -116,28 +117,72 @@ onUnmounted(() => {
 });
 </script>
 
-
 <style scoped>
 .game-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  background: linear-gradient(to bottom, #f5f5f7, #eaeaea);
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .game-info {
   display: flex;
   gap: 20px;
-  align-items: center;
+  margin-bottom: 20px;
+}
+.status-button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #007aff;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s ease;
+}
+
+.status-button:hover {
+  background: #005bb5;
+
+}
+
+/* 胜利状态样式 */
+.status-button.win {
+  background: #4cd964;
+  color: white;
+}
+
+/* 失败状态样式 */
+.status-button.lose {
+  background: #ff3b30;
+  color: white;
+}
+.game-info button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #007aff;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.game-info button:hover {
+  background: #005bb5;
 }
 
 .board {
   display: grid;
-  gap: 1px;
-  background: #999;
-  padding: 1px;
+  gap: 2px;
+  background: #d1d1d6;
+  border-radius: 12px;
+  padding: 10px;
   position: relative;
-  /* 新增 */
 }
 
 .game-over-overlay,

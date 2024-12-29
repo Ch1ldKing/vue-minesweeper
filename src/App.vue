@@ -201,6 +201,19 @@ const handleStateChange = (state: { currentMineCount: number; isPlacingMode: boo
   }
 }
 
+@import './apple-style.css';
+
+/* 添加模态框动画 */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
 /* 大屏幕布局 */
 @media (min-width: 1024px) {
   .content-wrapper {

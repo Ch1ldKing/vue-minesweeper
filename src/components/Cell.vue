@@ -9,7 +9,7 @@
     @click="$emit('reveal')" @contextmenu.prevent="$emit('flag')">
     <transition name="fade">
       <template v-if="modelValue.isRevealed && !modelValue.isMine">
-        {{ modelValue.neighborMines || '' }}
+        {{ modelValue.neighborMines || "" }}
       </template>
       <template v-else-if="(modelValue.isRevealed && modelValue.isMine) || (placingMode && modelValue.isMine)">
         💣
@@ -35,39 +35,83 @@ defineEmits<{
 }>();
 
 </script>
-
 <style scoped>
 .cell {
   width: 40px;
   height: 40px;
-  border: 1px solid #999;
-  background: #ccc;
-  font-weight: bold;
+  border-radius: 8px;
+  background: #f5f5f7;
+  border: 1px solid #c7c7cc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-size: 18px;
+  font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.2s ease;
-  position: relative;
-  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .cell.revealed {
-  background: #eee;
-  transition: background-color 0.3s ease;
+  background: #e5e5ea;
+  border-color: #d1d1d6;
+  box-shadow: none;
 }
 
 .cell.mine-placing {
-  background: #ffeb3b;
-  opacity: 0.8;
+  background: rgba(255, 235, 59, 0.8);
+  /* 黄色，用于布雷模式 */
 }
 
 .cell.mine {
-  background: #f00;
+  background: #ff3b30;
+  /* 红色，用于显示地雷 */
+  color: white;
+}
+
+.cell.flagged {
+  color: #ff9500;
+  /* 橙色，用于显示旗帜 */
 }
 
 .cell:not(.revealed):hover {
-  background: #ddd;
+  background: #e0e0e6;
 }
 
+/* 数字颜色 */
+.cell[data-number="1"] {
+  color: #0000ff;
+}
+
+.cell[data-number="2"] {
+  color: #008000;
+}
+
+.cell[data-number="3"] {
+  color: #ff0000;
+}
+
+.cell[data-number="4"] {
+  color: #000080;
+}
+
+.cell[data-number="5"] {
+  color: #800000;
+}
+
+.cell[data-number="6"] {
+  color: #008080;
+}
+
+.cell[data-number="7"] {
+  color: #000000;
+}
+
+.cell[data-number="8"] {
+  color: #808080;
+}
+
+/* 动画效果 */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -78,9 +122,8 @@ defineEmits<{
   opacity: 0;
 }
 
-/* 数字显示动画 */
+/* 数字揭示动效 */
 .cell.revealed:not(.mine) {
-  color: transparent;
   animation: numberReveal 0.3s ease forwards;
 }
 
@@ -97,49 +140,6 @@ defineEmits<{
   100% {
     transform: scale(1);
     opacity: 1;
-    color: inherit !important;
   }
 }
-
-.cell[data-number="1"] {
-  color: #0000FF !important;
-  /* 蓝色 */
-}
-
-.cell[data-number="2"] {
-  color: #008000 !important;
-  /* 绿色 */
-}
-
-.cell[data-number="3"] {
-  color: #FF0000 !important;
-  /* 红色 */
-}
-
-.cell[data-number="4"] {
-  color: #000080 !important;
-  /* 深蓝色 */
-}
-
-.cell[data-number="5"] {
-  color: #800000 !important;
-  /* 深红色 */
-}
-
-.cell[data-number="6"] {
-  color: #008080 !important;
-  /* 青色 */
-}
-
-.cell[data-number="7"] {
-  color: #000000 !important;
-  /* 黑色 */
-}
-
-.cell[data-number="8"] {
-  color: #808080 !important;
-  /* 灰色 */
-}
-
-
 </style>
